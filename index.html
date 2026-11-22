@@ -512,7 +512,12 @@
     var dishId = dishEl ? dishEl.getAttribute("data-id") : null;
 
     if (act === "signin") {
-      if (auth) auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider()).catch(function (err) { showBanner("Sign-in failed: " + (err.message || err.code)); });
+      if (!auth) return;
+      var provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+      auth.signInWithPopup(provider).catch(function (err) {
+        showBanner("Sign-in failed (" + (err.code || "unknown") + "): " + (err.message || ""));
+      });
       return;
     }
     if (act === "signout") { if (auth) auth.signOut(); return; }
