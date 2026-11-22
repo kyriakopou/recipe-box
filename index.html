@@ -1,4 +1,3 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <!doctype html>
 <html lang="en">
 <head>
@@ -260,26 +259,12 @@
     <button class="btn" type="submit">Add kind</button>
   </form>
 
-  <section class="backup" id="backup" hidden>
-    <div class="actions">
-      <button class="btn small" type="button" id="bk-copy">Copy backup</button>
-      <button class="btn small" type="button" id="bk-restore">Restore backup</button>
-    </div>
-    <div class="hint">Recipes are saved on this phone only. Copy a backup now and then and keep it in Notes.</div>
-    <div id="bk-panel" hidden>
-      <div class="field">
-        <label for="bk-text">Backup text</label>
-        <textarea id="bk-text" rows="5"></textarea>
-      </div>
-      <div class="actions">
-        <button class="btn small primary" type="button" id="bk-apply">Restore from this text</button>
-        <button class="btn small" type="button" id="bk-close">Close</button>
-      </div>
-      <div class="msg" id="bk-msg"></div>
-    </div>
-  </section>
+  <section class="backup" id="signout-wrap" hidden><div class="actions"><button class="btn small" type="button" data-act="signout">Sign out</button></div></section>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 (function () {
   var $ = function (s) { return document.querySelector(s); };
@@ -330,9 +315,10 @@
     var list = $("#list");
     $("#open-form").hidden = !(db && canWrite);
     $("#cat-form").hidden = !(db && canWrite && loaded.d && loaded.c);
+    $("#signout-wrap").hidden = !db;
 
     if (!db) {
-      list.innerHTML = '<div class="status">Saving is not available in this view. Open this page while signed in to claude.ai.</div>';
+      list.innerHTML = (authChecked ? '<div class="status"><p>Sign in with one of the allowed Google accounts to see your recipes.</p><button class="btn primary" type="button" data-act="signin">Sign in with Google</button></div>' : '<div class="status">Loading your recipes</div>');
       $("#count").textContent = "";
       return;
     }
@@ -341,18 +327,7 @@
       return;
     }
 
-    var samples = dishes.filter(function (d) { return d.example; }).length;
     var banner = $("#banner");
-    if (!canWrite) {
-      banner.hidden = false;
-      banner.innerHTML = "<span>You can browse this recipe box but not change it.</span>";
-    } else if (samples) {
-      banner.hidden = false;
-      banner.innerHTML = "<span>These are sample dishes to show how it works.</span>" +
-        '<button class="btn small" type="button" data-act="clear-samples">Remove samples</button>';
-    } else {
-      banner.hidden = true;
-    }
 
     $("#count").textContent = dishes.length + (dishes.length === 1 ? " dish" : " dishes") +
       " in " + cats.length + (cats.length === 1 ? " kind" : " kinds");
@@ -536,6 +511,11 @@
     var dishEl = btn.closest("[data-id]");
     var dishId = dishEl ? dishEl.getAttribute("data-id") : null;
 
+    if (act === "signin") {
+      if (auth) auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider()).catch(function (err) { showBanner("Sign-in failed: " + (err.message || err.code)); });
+      return;
+    }
+    if (act === "signout") { if (auth) auth.signOut(); return; }
     if (act === "toggle") {
       if (closed.has(catId)) closed.delete(catId); else closed.add(catId);
       render();
@@ -565,116 +545,104 @@
     }
   });
 
-  function makeLocalDb() {
-    var KEY = "recipe-box-v1";
-    var store = { dishes: {}, categories: {} };
-    var fresh = true, persists = true;
-    try {
-      var raw = localStorage.getItem(KEY);
-      if (raw) { store = JSON.parse(raw); fresh = false; }
-    } catch (e) { persists = false; }
-    store.dishes = store.dishes || {};
-    store.categories = store.categories || {};
-    var subs = { dishes: [], categories: [] };
-    function save() {
-      try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { persists = false; }
-    }
-    function snap(col) {
-      return { docs: Object.keys(store[col]).map(function (id) { return { id: id, data: function () { return store[col][id]; } }; }) };
-    }
-    function emit(col) { subs[col].forEach(function (fn) { fn(snap(col)); }); }
-    function newId() { return "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
-    function docRef(col, id) {
-      return {
-        update: function (d) { store[col][id] = Object.assign({}, store[col][id], d); save(); emit(col); return Promise.resolve(); },
-        delete: function () { delete store[col][id]; save(); emit(col); return Promise.resolve(); }
-      };
-    }
-    if (fresh) {
-      var t = Date.now();
-      store.categories = {
-        pasta: { name: "Pasta", example: true, createdAt: t },
-        soups: { name: "Soups", example: true, createdAt: t + 1 },
-        desserts: { name: "Desserts", example: true, createdAt: t + 2 }
-      };
-      store.dishes = {
-        "d-ravioli": { name: "Ravioli with spinach", category: "pasta", links: ["https://www.instagram.com/reel/example1/", "https://www.youtube.com/watch?v=example1"], note: "Ricotta and nutmeg in the filling", example: true, createdAt: t + 10 },
-        "d-carbonara": { name: "Spaghetti carbonara", category: "pasta", links: ["https://cooking.nytimes.com/recipes/example-carbonara"], note: "", example: true, createdAt: t + 11 },
-        "d-lentil": { name: "Red lentil soup", category: "soups", links: ["https://www.youtube.com/watch?v=example2"], note: "Good with lemon on top", example: true, createdAt: t + 12 },
-        "d-tiramisu": { name: "Tiramisu", category: "desserts", links: ["https://www.instagram.com/reel/example2/"], note: "", example: true, createdAt: t + 13 }
-      };
-      save();
-    }
+  // ---- SETUP: paste the values from your Firebase project here ----
+  var FIREBASE_CONFIG = {
+    apiKey: "AIzaSyCDXqjR528LeLCetrcO3ytenqbrQQSZSbY",
+    authDomain: "recipe-box-e4024.firebaseapp.com",
+    projectId: "recipe-box-e4024",
+    storageBucket: "recipe-box-e4024.firebasestorage.app",
+    messagingSenderId: "640117447346",
+    appId: "1:640117447346:web:5183397af488b433cb47ab"
+  };
+  // Only these two Google accounts can read or change the recipes.
+  var ALLOWED_EMAILS = ["kyriakopou@gmail.com", "angelizk65@gmail.com"];
+  // ------------------------------------------------------------------
+
+  var auth = null, unsubs = [], authChecked = false;
+
+  function makeCloudDb(fs) {
     return {
-      persists: function () { return persists; },
       collection: function (col) {
         return {
-          add: function (d) { var id = newId(); store[col][id] = d; save(); emit(col); return Promise.resolve({ id: id }); },
-          onSnapshot: function (next) {
-            subs[col].push(next);
-            setTimeout(function () { next(snap(col)); }, 0);
-            return function () {};
-          }
+          add: function (d) { return fs.collection(col).add(d); },
+          onSnapshot: function (next, onErr) { return fs.collection(col).onSnapshot(next, onErr); }
         };
       },
-      doc: function (path) { var p = path.split("/"); return docRef(p[0], p[1]); },
-      exportAll: function () { return JSON.stringify({ app: "recipe-box", version: 1, categories: store.categories, dishes: store.dishes }); },
-      importAll: function (text) {
-        var o = JSON.parse(text);
-        if (!o || o.app !== "recipe-box" || typeof o.dishes !== "object" || typeof o.categories !== "object") throw new Error("bad");
-        store.categories = o.categories; store.dishes = o.dishes;
-        save(); emit("categories"); emit("dishes");
-      }
+      doc: function (path) { return fs.doc(path); }
     };
   }
 
-  function wireBackup() {
-    var panel = $("#bk-panel"), txt = $("#bk-text"), msg = $("#bk-msg");
-    $("#backup").hidden = false;
-    $("#bk-copy").addEventListener("click", function () {
-      var data = db.exportAll();
-      panel.hidden = false;
-      txt.value = data;
-      msg.style.color = "var(--muted)";
-      var done = function () { msg.textContent = "Backup copied. Paste it into Notes to keep it."; };
-      var manual = function () { txt.focus(); txt.select(); msg.textContent = "Select all of this text, copy it and paste it into Notes."; };
-      try { navigator.clipboard.writeText(data).then(done, manual); } catch (e) { manual(); }
-    });
-    $("#bk-restore").addEventListener("click", function () {
-      panel.hidden = false; txt.value = ""; msg.textContent = ""; txt.focus();
-    });
-    $("#bk-close").addEventListener("click", function () { panel.hidden = true; });
-    $("#bk-apply").addEventListener("click", function () {
-      msg.style.color = "var(--danger)";
-      try { db.importAll(txt.value.trim()); msg.style.color = "var(--muted)"; msg.textContent = "Recipes restored."; }
-      catch (e) { msg.textContent = "That text is not a Recipe Box backup."; }
+  function showBanner(text) {
+    var b = $("#banner");
+    b.hidden = false;
+    b.textContent = text;
+  }
+
+  function isAllowed(user) {
+    return !!user && !!user.email && ALLOWED_EMAILS.indexOf(user.email.toLowerCase()) >= 0;
+  }
+
+  function attach(fs) {
+    db = makeCloudDb(fs);
+    loaded = { d: false, c: false };
+    var onErr = function (err) {
+      showBanner(err && err.code === "permission-denied"
+        ? "This Google account is not allowed to use this recipe box."
+        : "Could not load recipes. Check your connection and reload.");
+      render();
+    };
+    unsubs.push(db.collection("categories").onSnapshot(function (s) {
+      cats = s.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
+      loaded.c = true; $("#banner").hidden = true; render();
+    }, onErr));
+    unsubs.push(db.collection("dishes").onSnapshot(function (s) {
+      dishes = s.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
+      loaded.d = true; $("#banner").hidden = true; render();
+    }, onErr));
+    render();
+  }
+
+  function detach() {
+    unsubs.forEach(function (u) { if (typeof u === "function") u(); });
+    unsubs = [];
+    db = null; dishes = []; cats = [];
+    loaded = { d: false, c: false };
+  }
+
+  function startCloud() {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    var fs = firebase.firestore();
+    fs.enablePersistence({ synchronizeTabs: true }).catch(function () {});
+    auth = firebase.auth();
+    auth.getRedirectResult().catch(function (err) { showBanner("Sign-in failed: " + (err.message || err.code)); });
+    auth.onAuthStateChanged(function (user) {
+      authChecked = true;
+      if (isAllowed(user)) {
+        if (!db) attach(fs);
+      } else {
+        detach();
+        if (user) {
+          showBanner("That Google account is not on the allowed list.");
+          auth.signOut();
+        }
+        render();
+      }
     });
   }
 
   function init() {
-    db = makeLocalDb();
-    var onErr = function () {};
-    var done = function () { render(); };
-    db.collection("categories").onSnapshot(function (s) {
-      cats = s.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
-      loaded.c = true; done();
-    }, onErr);
-    db.collection("dishes").onSnapshot(function (s) {
-      dishes = s.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
-      loaded.d = true; done();
-    }, onErr);
-    wireBackup();
-    if (!db.persists()) {
-      var b = $("#banner");
-      b.hidden = false;
-      b.innerHTML = "<span>This browser is not keeping saved data. Use Copy backup after you add dishes.</span>";
+    if (/PASTE/.test(FIREBASE_CONFIG.apiKey)) {
+      authChecked = true;
+      showBanner("Setup needed: paste your Firebase settings into the top of this file.");
+      render();
+      return;
     }
+    startCloud();
     render();
   }
+
   init();
 })();
 </script>
 </body>
 </html>
-
-</body></html>
