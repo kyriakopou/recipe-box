@@ -1,0 +1,680 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Recipe Box</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+  /* Layout: one narrow column, kinds of dish as sections, each dish a row with its source links beneath. */
+  :root {
+    color-scheme: light;
+    --bg: #F3F6F2;
+    --surface: #FFFFFF;
+    --ink: #1B2623;
+    --muted: #5A6A65;
+    --line: #DAE1DC;
+    --accent: #2D6A4F;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #E1EFE7;
+    --danger: #B3412F;
+    --font-head: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+    --font-body: "DM Sans", "Segoe UI", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121816;
+      --surface: #1A2320;
+      --ink: #E8EEEA;
+      --muted: #93A39C;
+      --line: #2A3632;
+      --accent: #6FC39A;
+      --accent-ink: #0E1A15;
+      --accent-soft: #223B30;
+      --danger: #E48B79;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121816;
+    --surface: #1A2320;
+    --ink: #E8EEEA;
+    --muted: #93A39C;
+    --line: #2A3632;
+    --accent: #6FC39A;
+    --accent-ink: #0E1A15;
+    --accent-soft: #223B30;
+    --danger: #E48B79;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.45;
+    padding-block: 28px 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 44rem; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+  h1 {
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: 2rem;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .count { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+
+  .btn {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .btn.primary:hover { filter: brightness(1.06); }
+  .btn.small { padding: 4px 10px; font-size: 0.85rem; }
+  .btn.danger { color: var(--danger); }
+  .btn.danger.armed { background: var(--danger); border-color: var(--danger); color: var(--surface); }
+
+  .search {
+    width: 100%;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .note-banner {
+    background: var(--accent-soft);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .note-banner span { min-width: 0; }
+
+  form.panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .panel h2 { font-family: var(--font-head); font-size: 1.15rem; margin: 0; }
+  .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .field label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .field input, .field select, .field textarea {
+    width: 100%;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 9px 11px;
+  }
+  .field textarea { resize: vertical; min-height: 4.5rem; }
+  .hint { color: var(--muted); font-size: 0.82rem; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .msg { color: var(--danger); font-size: 0.9rem; min-height: 1.2em; }
+
+  .cat { border-top: 1px solid var(--line); padding-top: 14px; }
+  .cat-head { display: flex; align-items: center; gap: 8px; }
+  .cat-toggle {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    background: none;
+    border: 0;
+    padding: 4px 0;
+    cursor: pointer;
+    text-align: left;
+  }
+  .cat-name { font-family: var(--font-head); font-weight: 700; font-size: 1.35rem; overflow-wrap: anywhere; }
+  .cat-count { color: var(--muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+  .caret { width: 0.6rem; flex: none; color: var(--muted); transition: transform 0.15s; }
+  .cat.closed .caret { transform: rotate(-90deg); }
+  .cat.closed .dishes, .cat.closed .empty-cat { display: none; }
+
+  .dishes { list-style: none; margin: 8px 0 0; padding: 0; }
+  .dish { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .dish:last-child { border-bottom: 0; }
+  .dish-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; justify-content: space-between; }
+  .dish-name { font-weight: 700; font-size: 1.05rem; min-width: 0; overflow-wrap: anywhere; }
+  .tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 99px;
+    padding: 1px 7px;
+    margin-left: 8px;
+    vertical-align: 2px;
+  }
+  .row-actions { display: flex; gap: 6px; }
+  .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    max-width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 99px;
+    padding: 5px 12px;
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+  .chip:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .chip .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c, var(--muted)); flex: none; }
+  .chip .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .no-links { color: var(--muted); font-size: 0.88rem; margin-top: 6px; }
+  .dish-note { color: var(--muted); font-size: 0.92rem; margin-top: 6px; overflow-wrap: anywhere; }
+  .empty-cat { color: var(--muted); font-size: 0.92rem; padding: 8px 0 4px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+  .empty, .status { color: var(--muted); text-align: center; padding: 28px 8px; }
+  .empty strong { display: block; color: var(--ink); font-family: var(--font-head); font-size: 1.2rem; margin-bottom: 4px; }
+
+  .add-cat { display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid var(--line); padding-top: 16px; }
+  .add-cat input { flex: 1 1 12rem; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 9px 11px; }
+
+  .backup { border-top: 1px solid var(--line); padding-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+
+  @media (prefers-reduced-motion: reduce) { .caret { transition: none; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Recipe Box</h1>
+      <div class="count" id="count">Loading dishes</div>
+    </div>
+    <button class="btn primary" id="open-form" type="button" hidden>Add dish</button>
+  </header>
+
+  <input class="search" id="search" type="search" placeholder="Search dishes, kinds or notes" aria-label="Search dishes">
+
+  <div class="note-banner" id="banner" hidden></div>
+
+  <form class="panel" id="dish-form" hidden autocomplete="off">
+    <h2 id="form-title">Add a dish</h2>
+    <div class="field">
+      <label for="f-name">Dish</label>
+      <input id="f-name" type="text" placeholder="Ravioli with spinach" maxlength="120">
+    </div>
+    <div class="field">
+      <label for="f-cat">Kind</label>
+      <select id="f-cat"></select>
+    </div>
+    <div class="field" id="newcat-wrap" hidden>
+      <label for="f-newcat">New kind</label>
+      <input id="f-newcat" type="text" placeholder="Pasta" maxlength="60">
+    </div>
+    <div class="field">
+      <label for="f-links">Links</label>
+      <textarea id="f-links" placeholder="https://www.instagram.com/reel/...&#10;https://www.youtube.com/watch?v=..."></textarea>
+      <span class="hint">One link per line: Instagram, YouTube, NYT Cooking, any recipe site.</span>
+    </div>
+    <div class="field">
+      <label for="f-note">Note (optional)</label>
+      <input id="f-note" type="text" placeholder="Use less salt in the filling" maxlength="200">
+    </div>
+    <div class="msg" id="form-msg" role="alert"></div>
+    <div class="actions">
+      <button class="btn primary" type="submit" id="save-btn">Save dish</button>
+      <button class="btn" type="button" id="cancel-btn">Cancel</button>
+    </div>
+  </form>
+
+  <main id="list" aria-live="polite"></main>
+
+  <form class="add-cat" id="cat-form" hidden autocomplete="off">
+    <input id="f-addcat" type="text" placeholder="New kind of dish, such as Soups" aria-label="New kind of dish" maxlength="60">
+    <button class="btn" type="submit">Add kind</button>
+  </form>
+
+  <section class="backup" id="backup" hidden>
+    <div class="actions">
+      <button class="btn small" type="button" id="bk-copy">Copy backup</button>
+      <button class="btn small" type="button" id="bk-restore">Restore backup</button>
+    </div>
+    <div class="hint">Recipes are saved on this phone only. Copy a backup now and then and keep it in Notes.</div>
+    <div id="bk-panel" hidden>
+      <div class="field">
+        <label for="bk-text">Backup text</label>
+        <textarea id="bk-text" rows="5"></textarea>
+      </div>
+      <div class="actions">
+        <button class="btn small primary" type="button" id="bk-apply">Restore from this text</button>
+        <button class="btn small" type="button" id="bk-close">Close</button>
+      </div>
+      <div class="msg" id="bk-msg"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+  var esc = function (s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  };
+
+  var db = null;
+  var dishes = [], cats = [];
+  var loaded = { d: false, c: false };
+  var canWrite = true, q = "", closed = new Set();
+  var editingId = null, confirmId = null, confirmTimer = null, busy = false;
+
+  var SOURCES = [
+    { re: /(^|\.)instagram\.com$/, label: "Instagram", c: "#D6336C" },
+    { re: /(^|\.)youtube\.com$|^youtu\.be$/, label: "YouTube", c: "#E03131" },
+    { re: /(^|\.)tiktok\.com$/, label: "TikTok", c: "#1BA6A6" },
+    { re: /^cooking\.nytimes\.com$/, label: "NYT Cooking", c: "#3B7BBF" },
+    { re: /(^|\.)facebook\.com$|^fb\.watch$/, label: "Facebook", c: "#3B6FD6" },
+    { re: /(^|\.)pinterest\.[a-z.]+$/, label: "Pinterest", c: "#C2272D" }
+  ];
+
+  function normUrl(s) {
+    s = String(s || "").trim();
+    if (!s) return null;
+    if (!/^https?:\/\//i.test(s)) s = "https://" + s;
+    try {
+      var u = new URL(s);
+      if (u.hostname.indexOf(".") < 0) return null;
+      return u.href;
+    } catch (e) { return null; }
+  }
+  function linkInfo(url) {
+    var h = "";
+    try { h = new URL(url).hostname.replace(/^www\./, "").toLowerCase(); } catch (e) {}
+    for (var i = 0; i < SOURCES.length; i++) {
+      if (SOURCES[i].re.test(h)) return { label: SOURCES[i].label, c: SOURCES[i].c };
+    }
+    return { label: h || url, c: "" };
+  }
+  var byName = function (a, b) { return String(a.name).localeCompare(String(b.name), undefined, { sensitivity: "base" }); };
+
+  function dishesOf(catId) { return dishes.filter(function (d) { return d.category === catId; }); }
+
+  function render() {
+    var list = $("#list");
+    $("#open-form").hidden = !(db && canWrite);
+    $("#cat-form").hidden = !(db && canWrite && loaded.d && loaded.c);
+
+    if (!db) {
+      list.innerHTML = '<div class="status">Saving is not available in this view. Open this page while signed in to claude.ai.</div>';
+      $("#count").textContent = "";
+      return;
+    }
+    if (!(loaded.d && loaded.c)) {
+      list.innerHTML = '<div class="status">Loading your recipes</div>';
+      return;
+    }
+
+    var samples = dishes.filter(function (d) { return d.example; }).length;
+    var banner = $("#banner");
+    if (!canWrite) {
+      banner.hidden = false;
+      banner.innerHTML = "<span>You can browse this recipe box but not change it.</span>";
+    } else if (samples) {
+      banner.hidden = false;
+      banner.innerHTML = "<span>These are sample dishes to show how it works.</span>" +
+        '<button class="btn small" type="button" data-act="clear-samples">Remove samples</button>';
+    } else {
+      banner.hidden = true;
+    }
+
+    $("#count").textContent = dishes.length + (dishes.length === 1 ? " dish" : " dishes") +
+      " in " + cats.length + (cats.length === 1 ? " kind" : " kinds");
+
+    fillCats();
+
+    var term = q.trim().toLowerCase();
+    var sortedCats = cats.slice().sort(byName);
+    var html = "";
+    var shown = 0;
+    sortedCats.forEach(function (c) {
+      var all = dishesOf(c.id).sort(byName);
+      var items = term ? all.filter(function (d) {
+        return (d.name + " " + (d.note || "") + " " + c.name).toLowerCase().indexOf(term) >= 0;
+      }) : all;
+      if (term && !items.length) return;
+      shown++;
+      var isClosed = closed.has(c.id) && !term;
+      html += '<section class="cat' + (isClosed ? " closed" : "") + '" data-cat="' + esc(c.id) + '">';
+      html += '<div class="cat-head"><button type="button" class="cat-toggle" data-act="toggle" aria-expanded="' + (!isClosed) + '">' +
+        '<svg class="caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        '<span class="cat-name">' + esc(c.name) + '</span><span class="cat-count">' + all.length + '</span></button>';
+      if (canWrite) html += '<button type="button" class="btn small" data-act="add-here">Add dish</button>';
+      html += "</div>";
+      if (!items.length) {
+        html += '<div class="empty-cat"><span>No dishes yet.</span>';
+        if (canWrite) html += '<button type="button" class="btn small danger" data-act="del-cat">Remove this kind</button>';
+        html += "</div>";
+      } else {
+        html += '<ul class="dishes">';
+        items.forEach(function (d) { html += dishHtml(d); });
+        html += "</ul>";
+      }
+      html += "</section>";
+    });
+
+    if (!cats.length) {
+      html = '<div class="empty"><strong>No dishes yet</strong>Choose Add dish, pick a kind such as Pasta, name the dish and paste a link.</div>';
+    } else if (term && !shown) {
+      html = '<div class="empty"><strong>Nothing found</strong>No dish matches "' + esc(q.trim()) + '".</div>';
+    }
+    list.innerHTML = html;
+  }
+
+  function dishHtml(d) {
+    var h = '<li class="dish" data-id="' + esc(d.id) + '"><div class="dish-top"><div class="dish-name">' + esc(d.name) +
+      (d.example ? '<span class="tag">Sample</span>' : "") + "</div>";
+    if (canWrite) {
+      var armed = confirmId === d.id;
+      h += '<div class="row-actions"><button type="button" class="btn small" data-act="edit">Edit</button>' +
+        '<button type="button" class="btn small danger' + (armed ? " armed" : "") + '" data-act="del">' + (armed ? "Confirm delete" : "Delete") + "</button></div>";
+    }
+    h += "</div>";
+    var links = Array.isArray(d.links) ? d.links : [];
+    if (links.length) {
+      h += '<div class="links">';
+      links.forEach(function (u) {
+        var info = linkInfo(u);
+        var safe = normUrl(u);
+        if (!safe) return;
+        h += '<a class="chip" href="' + esc(safe) + '" target="_blank" rel="noopener noreferrer">' +
+          '<i class="dot"' + (info.c ? ' style="--c:' + info.c + '"' : "") + '></i><span class="lbl">' + esc(info.label) + "</span></a>";
+      });
+      h += "</div>";
+    } else {
+      h += '<div class="no-links">No link saved yet</div>';
+    }
+    if (d.note) h += '<div class="dish-note">' + esc(d.note) + "</div>";
+    return h + "</li>";
+  }
+
+  function fillCats(preselect) {
+    var sel = $("#f-cat");
+    var cur = preselect || sel.value;
+    var opts = cats.slice().sort(byName).map(function (c) {
+      return '<option value="' + esc(c.id) + '">' + esc(c.name) + "</option>";
+    });
+    opts.push('<option value="__new">New kind...</option>');
+    sel.innerHTML = opts.join("");
+    var has = Array.prototype.some.call(sel.options, function (o) { return o.value === cur; });
+    sel.value = has ? cur : (cats.length ? sel.options[0].value : "__new");
+    $("#newcat-wrap").hidden = sel.value !== "__new";
+  }
+
+  function openForm(dish, catId) {
+    editingId = dish ? dish.id : null;
+    $("#form-title").textContent = dish ? "Edit dish" : "Add a dish";
+    $("#save-btn").textContent = dish ? "Save changes" : "Save dish";
+    $("#f-name").value = dish ? dish.name : "";
+    $("#f-links").value = dish && Array.isArray(dish.links) ? dish.links.join("\n") : "";
+    $("#f-note").value = dish ? (dish.note || "") : "";
+    $("#f-newcat").value = "";
+    fillCats(dish ? dish.category : catId);
+    $("#form-msg").textContent = "";
+    var f = $("#dish-form");
+    f.hidden = false;
+    f.scrollIntoView({ block: "start", behavior: "smooth" });
+    $("#f-name").focus({ preventScroll: true });
+  }
+  function closeForm() {
+    $("#dish-form").hidden = true;
+    editingId = null;
+  }
+  function failText(err) {
+    return err && err.code === "invalid_argument"
+      ? "Could not save. You may only have permission to view this page."
+      : "Could not save. Try again in a moment.";
+  }
+
+  $("#open-form").addEventListener("click", function () { openForm(null); });
+  $("#cancel-btn").addEventListener("click", closeForm);
+  $("#f-cat").addEventListener("change", function () {
+    var isNew = this.value === "__new";
+    $("#newcat-wrap").hidden = !isNew;
+    if (isNew) $("#f-newcat").focus();
+  });
+  $("#search").addEventListener("input", function () { q = this.value; render(); });
+
+  $("#dish-form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    if (busy || !db) return;
+    var msg = $("#form-msg");
+    var name = $("#f-name").value.trim();
+    if (!name) { msg.textContent = "Enter a dish name."; return; }
+    var raw = $("#f-links").value.split(/[\s,]+/).filter(Boolean);
+    var links = [];
+    for (var i = 0; i < raw.length; i++) {
+      var u = normUrl(raw[i]);
+      if (!u) { msg.textContent = 'This link does not look right: "' + raw[i] + '"'; return; }
+      if (links.indexOf(u) < 0) links.push(u);
+    }
+    var catId = $("#f-cat").value;
+    var newName = $("#f-newcat").value.trim();
+    if (catId === "__new" && !newName) { msg.textContent = "Enter a name for the new kind."; return; }
+    busy = true;
+    msg.textContent = "";
+    $("#save-btn").disabled = true;
+    try {
+      if (catId === "__new") {
+        var ex = cats.find(function (c) { return String(c.name).toLowerCase() === newName.toLowerCase(); });
+        if (ex) catId = ex.id;
+        else {
+          var ref = await db.collection("categories").add({ name: newName, createdAt: Date.now() });
+          catId = ref.id;
+        }
+      }
+      var body = { name: name, category: catId, links: links, note: $("#f-note").value.trim() };
+      if (editingId) await db.doc("dishes/" + editingId).update(body);
+      else await db.collection("dishes").add(Object.assign({ createdAt: Date.now() }, body));
+      closeForm();
+    } catch (err) {
+      msg.textContent = failText(err);
+    }
+    busy = false;
+    $("#save-btn").disabled = false;
+  });
+
+  $("#cat-form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var inp = $("#f-addcat");
+    var n = inp.value.trim();
+    if (!n || !db || busy) return;
+    if (cats.some(function (c) { return String(c.name).toLowerCase() === n.toLowerCase(); })) { inp.value = ""; return; }
+    busy = true;
+    try {
+      await db.collection("categories").add({ name: n, createdAt: Date.now() });
+      inp.value = "";
+    } catch (err) { inp.placeholder = failText(err); }
+    busy = false;
+  });
+
+  document.addEventListener("click", async function (e) {
+    var btn = e.target.closest("[data-act]");
+    if (!btn) {
+      if (confirmId) { confirmId = null; render(); }
+      return;
+    }
+    var act = btn.getAttribute("data-act");
+    var catEl = btn.closest("[data-cat]");
+    var catId = catEl ? catEl.getAttribute("data-cat") : null;
+    var dishEl = btn.closest("[data-id]");
+    var dishId = dishEl ? dishEl.getAttribute("data-id") : null;
+
+    if (act === "toggle") {
+      if (closed.has(catId)) closed.delete(catId); else closed.add(catId);
+      render();
+    } else if (act === "add-here") {
+      openForm(null, catId);
+    } else if (act === "edit") {
+      var d = dishes.find(function (x) { return x.id === dishId; });
+      if (d) openForm(d);
+    } else if (act === "del") {
+      if (confirmId !== dishId) {
+        confirmId = dishId;
+        clearTimeout(confirmTimer);
+        confirmTimer = setTimeout(function () { confirmId = null; render(); }, 4000);
+        render();
+        return;
+      }
+      confirmId = null;
+      try { await db.doc("dishes/" + dishId).delete(); } catch (err) { $("#banner").hidden = false; $("#banner").textContent = "Could not delete. Try again in a moment."; }
+    } else if (act === "del-cat") {
+      try { await db.doc("categories/" + catId).delete(); } catch (err) { $("#banner").hidden = false; $("#banner").textContent = "Could not remove this kind. Try again in a moment."; }
+    } else if (act === "clear-samples") {
+      btn.disabled = true;
+      try {
+        for (var i = 0; i < dishes.length; i++) if (dishes[i].example) await db.doc("dishes/" + dishes[i].id).delete();
+        for (var j = 0; j < cats.length; j++) if (cats[j].example && !dishes.some(function (x) { return x.category === cats[j].id && !x.example; })) await db.doc("categories/" + cats[j].id).delete();
+      } catch (err) { btn.disabled = false; }
+    }
+  });
+
+  function makeLocalDb() {
+    var KEY = "recipe-box-v1";
+    var store = { dishes: {}, categories: {} };
+    var fresh = true, persists = true;
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) { store = JSON.parse(raw); fresh = false; }
+    } catch (e) { persists = false; }
+    store.dishes = store.dishes || {};
+    store.categories = store.categories || {};
+    var subs = { dishes: [], categories: [] };
+    function save() {
+      try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { persists = false; }
+    }
+    function snap(col) {
+      return { docs: Object.keys(store[col]).map(function (id) { return { id: id, data: function () { return store[col][id]; } }; }) };
+    }
+    function emit(col) { subs[col].forEach(function (fn) { fn(snap(col)); }); }
+    function newId() { return "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+    function docRef(col, id) {
+      return {
+        update: function (d) { store[col][id] = Object.assign({}, store[col][id], d); save(); emit(col); return Promise.resolve(); },
+        delete: function () { delete store[col][id]; save(); emit(col); return Promise.resolve(); }
+      };
+    }
+    if (fresh) {
+      var t = Date.now();
+      store.categories = {
+        pasta: { name: "Pasta", example: true, createdAt: t },
+        soups: { name: "Soups", example: true, createdAt: t + 1 },
+        desserts: { name: "Desserts", example: true, createdAt: t + 2 }
+      };
+      store.dishes = {
+        "d-ravioli": { name: "Ravioli with spinach", category: "pasta", links: ["https://www.instagram.com/reel/example1/", "https://www.youtube.com/watch?v=example1"], note: "Ricotta and nutmeg in the filling", example: true, createdAt: t + 10 },
+        "d-carbonara": { name: "Spaghetti carbonara", category: "pasta", links: ["https://cooking.nytimes.com/recipes/example-carbonara"], note: "", example: true, createdAt: t + 11 },
+        "d-lentil": { name: "Red lentil soup", category: "soups", links: ["https://www.youtube.com/watch?v=example2"], note: "Good with lemon on top", example: true, createdAt: t + 12 },
+        "d-tiramisu": { name: "Tiramisu", category: "desserts", links: ["https://www.instagram.com/reel/example2/"], note: "", example: true, createdAt: t + 13 }
+      };
+      save();
+    }
+    return {
+      persists: function () { return persists; },
+      collection: function (col) {
+        return {
+          add: function (d) { var id = newId(); store[col][id] = d; save(); emit(col); return Promise.resolve({ id: id }); },
+          onSnapshot: function (next) {
+            subs[col].push(next);
+            setTimeout(function () { next(snap(col)); }, 0);
+            return function () {};
+          }
+        };
+      },
+      doc: function (path) { var p = path.split("/"); return docRef(p[0], p[1]); },
+      exportAll: function () { return JSON.stringify({ app: "recipe-box", version: 1, categories: store.categories, dishes: store.dishes }); },
+      importAll: function (text) {
+        var o = JSON.parse(text);
+        if (!o || o.app !== "recipe-box" || typeof o.dishes !== "object" || typeof o.categories !== "object") throw new Error("bad");
+        store.categories = o.categories; store.dishes = o.dishes;
+        save(); emit("categories"); emit("dishes");
+      }
+    };
+  }
+
+  function wireBackup() {
+    var panel = $("#bk-panel"), txt = $("#bk-text"), msg = $("#bk-msg");
+    $("#backup").hidden = false;
+    $("#bk-copy").addEventListener("click", function () {
+      var data = db.exportAll();
+      panel.hidden = false;
+      txt.value = data;
+      msg.style.color = "var(--muted)";
+      var done = function () { msg.textContent = "Backup copied. Paste it into Notes to keep it."; };
+      var manual = function () { txt.focus(); txt.select(); msg.textContent = "Select all of this text, copy it and paste it into Notes."; };
+      try { navigator.clipboard.writeText(data).then(done, manual); } catch (e) { manual(); }
+    });
+    $("#bk-restore").addEventListener("click", function () {
+      panel.hidden = false; txt.value = ""; msg.textContent = ""; txt.focus();
+    });
+    $("#bk-close").addEventListener("click", function () { panel.hidden = true; });
+    $("#bk-apply").addEventListener("click", function () {
+      msg.style.color = "var(--danger)";
+      try { db.importAll(txt.value.trim()); msg.style.color = "var(--muted)"; msg.textContent = "Recipes restored."; }
+      catch (e) { msg.textContent = "That text is not a Recipe Box backup."; }
+    });
+  }
+
+  function init() {
+    db = makeLocalDb();
+    var onErr = function () {};
+    var done = function () { render(); };
+    db.collection("categories").onSnapshot(function (s) {
+      cats = s.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
+      loaded.c = true; done();
+    }, onErr);
+    db.collection("dishes").onSnapshot(function (s) {
+      dishes = s.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
+      loaded.d = true; done();
+    }, onErr);
+    wireBackup();
+    if (!db.persists()) {
+      var b = $("#banner");
+      b.hidden = false;
+      b.innerHTML = "<span>This browser is not keeping saved data. Use Copy backup after you add dishes.</span>";
+    }
+    render();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
+
+</body></html>
